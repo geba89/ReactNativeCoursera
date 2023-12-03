@@ -1,119 +1,58 @@
-import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { useEffect, useMemo, useReducer, useCallback } from "react";
-import { Alert } from "react-native";
-import Onboarding from "./screens/Onboarding";
-import Profile from "./screens/Profile";
-import SplashScreen from "./screens/SplashScreen";
-import Home from "./screens/Home";
-import { StatusBar } from "expo-status-bar";
+import {useState, useEffect} from 'react'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import Onboarding from './screens/Onboarding';
+import {NavigationContainer} from '@react-navigation/native'
+import { createNativeStackNavigator} from '@react-navigation/native-stack'
+import Profile from './screens/Profile';
+import Home from './screens/Home';
+import useFonts from './hooks/useFonts'
+import * as SplashScreen from 'expo-splash-screen'
+import Header from './components/Header';
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
+SplashScreen.preventAutoHideAsync()
 
-import { AuthContext } from "./contexts/AuthContext";
-
-const Stack = createNativeStackNavigator();
-
-export default function App({ navigation }) {
-  const [state, dispatch] = useReducer(
-    (prevState, action) => {
-      switch (action.type) {
-        case "onboard":
-          return {
-            ...prevState,
-            isLoading: false,
-            isOnboardingCompleted: action.isOnboardingCompleted,
-          };
-      }
-    },
-    {
-      isLoading: true,
-      isOnboardingCompleted: false,
-    }
-  );
+export default function App() {
+  const [hasLoaded, setHasLoaded] = useState(false)
+  const [onboardingComplete, setOnboardingComplete] = useState(false)
+  const Stack = createNativeStackNavigator()
 
   useEffect(() => {
-    (async () => {
-      let profileData = [];
-      try {
-        const getProfile = await AsyncStorage.getItem("profile");
-        if (getProfile !== null) {
-          profileData = getProfile;
+    async function prepare(){
+      try{
+        await useFonts()
+      }catch(e){
+        console.warn(e)
+      }finally{
+        try{
+          setOnboardingComplete(await AsyncStorage.getItem('onboardingComplete'))
+        }catch(e){
+          console.warn(e)
         }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        if (Object.keys(profileData).length != 0) {
-          dispatch({ type: "onboard", isOnboardingCompleted: true });
-        } else {
-          dispatch({ type: "onboard", isOnboardingCompleted: false });
+        finally{
+          setHasLoaded(true)
         }
       }
-    })();
-  }, []);
+    }
 
-  const authContext = useMemo(
-    () => ({
-      onboard: async data => {
-        try {
-          const jsonValue = JSON.stringify(data);
-          await AsyncStorage.setItem("profile", jsonValue);
-        } catch (e) {
-          console.error(e);
-        }
+    prepare()
+  }, [])
 
-        dispatch({ type: "onboard", isOnboardingCompleted: true });
-      },
-      update: async data => {
-        try {
-          const jsonValue = JSON.stringify(data);
-          await AsyncStorage.setItem("profile", jsonValue);
-        } catch (e) {
-          console.error(e);
-        }
 
-        Alert.alert("Success", "Successfully saved changes!");
-      },
-      logout: async () => {
-        try {
-          await AsyncStorage.clear();
-        } catch (e) {
-          console.error(e);
-        }
 
-        dispatch({ type: "onboard", isOnboardingCompleted: false });
-      },
-    }),
-    []
-  );
+if(!hasLoaded){
+  return null
+}
 
-  if (state.isLoading) {
-    return <SplashScreen />;
-  }
+  SplashScreen.hideAsync()
 
   return (
-    <AuthContext.Provider value={authContext}>
-      <StatusBar style="dark" />
       <NavigationContainer>
-        <Stack.Navigator>
-          {state.isOnboardingCompleted ? (
-            <>
-              <Stack.Screen
-                name="Home"
-                component={Home}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen name="Profile" component={Profile} />
-            </>
-          ) : (
-            <Stack.Screen
-              name="Onboarding"
-              component={Onboarding}
-              options={{ headerShown: false }}
-            />
-          )}
+        <Stack.Navigator screenOptions={{header: Header}} initialRouteName={onboardingComplete ? 'Home' : 'Onboarding'}>
+          <Stack.Screen name='Home' component={Home}/>
+          <Stack.Screen name='Profile' component={Profile} />
+          <Stack.Screen name='Onboarding' component={Onboarding}/>
         </Stack.Navigator>
       </NavigationContainer>
-    </AuthContext.Provider>
   );
 }
+
