@@ -1,9 +1,9 @@
 {
   "expo": {
     "name": "little-lemon-app",
-    "owner": "marventures",
+    "owner": "geba89",
     "slug": "little-lemon-app",
-    "description": "This application is a React Native Food App. Users will have to go through a registration process. Once they successfully complete that phase, they are redirected to a home screen where they can search and filter menu items. User can also change their preferences in Profile page",
+    "description": "little lemon app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/Logo.png",
